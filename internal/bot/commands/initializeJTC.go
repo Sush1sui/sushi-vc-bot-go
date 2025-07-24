@@ -14,27 +14,15 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	categoryId := i.ApplicationCommandData().GetOption("category_id").StringValue()
-	if categoryId == "" {
-		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Category ID is required.",
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if e != nil {
-			fmt.Println("Error responding to interaction:", e)
-		}
-		return
-	}
-
-	category, err := s.State.Channel(categoryId)
+	category, err := s.GuildChannelCreateComplex(i.GuildID, discordgo.GuildChannelCreateData{
+		Name: "VC",
+		Type: discordgo.ChannelTypeGuildCategory,
+	})
 	if err != nil {
 		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Invalid Category ID.",
+				Content: "Failed to create category.",
 				Flags: discordgo.MessageFlagsEphemeral,
 			},
 		})

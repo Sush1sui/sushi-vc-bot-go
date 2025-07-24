@@ -39,6 +39,9 @@ func StartBot() {
 	}
 	defer s.Close()
 
+	DeployCommands(s)
+	DeployEvents(s)
+
 	fmt.Println("Bot is now running")
 
 	sc := make(chan os.Signal, 1)
