@@ -3,6 +3,7 @@ package button
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/bwmarrin/discordgo"
@@ -85,21 +86,31 @@ func HandleInviteMenu(i *discordgo.InteractionCreate) {
 	}
 	usersInvited := []string{}
 	usersFailedToInvite := []string{}
+	mu := sync.Mutex{}
+	wg := sync.WaitGroup{}
 	for _, userId := range selectedUserIds {
-		dmChannel, err := bot.Session.UserChannelCreate(userId)
-		if err != nil {
-			usersFailedToInvite = append(usersFailedToInvite, "<@"+userId+">")
-			continue
-		}
+		wg.Add(1)
+		go func(userId string) {
+			defer wg.Done()
+			dmChannel, err := bot.Session.UserChannelCreate(userId)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				usersFailedToInvite = append(usersFailedToInvite, "<@"+userId+">")
+				return
+			}
 
-		msg, err := bot.Session.ChannelMessageSendEmbed(dmChannel.ID, embed)
-		if err != nil || msg == nil {
-			usersFailedToInvite = append(usersFailedToInvite, "<@"+userId+">")
-			continue
-		} else {
-			usersInvited = append(usersInvited, "<@"+userId+">")
-		}
+			msg, err := bot.Session.ChannelMessageSendEmbed(dmChannel.ID, embed)
+			if err != nil || msg == nil {
+				usersFailedToInvite = append(usersFailedToInvite, "<@"+userId+">")
+				return
+			} else {
+				usersInvited = append(usersInvited, "<@"+userId+">")
+			}
+		}(userId)
 	}
+
+	wg.Wait()
 
 	err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
