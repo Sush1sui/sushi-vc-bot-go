@@ -9,12 +9,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func LockVC(i *discordgo.InteractionCreate) {
+func UnlockVC(i *discordgo.InteractionCreate) {
 	if i.Member == nil || i.GuildID == "" { return }
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "You are not the owner of a custom voice channel.",
@@ -26,9 +26,9 @@ func LockVC(i *discordgo.InteractionCreate) {
 		}
 		return
 	}
-	
-	customVc, err := bot.Session.Channel(res.ChannelID)
-	if err != nil || customVc == nil {
+
+	customVC, err := bot.Session.Channel(res.ChannelID)
+	if err != nil || customVC == nil {
 		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -42,19 +42,18 @@ func LockVC(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	// Edit the channel permissions to lock it
 	err = bot.Session.ChannelPermissionSet(
-		customVc.ID,
+		customVC.ID,
 		i.GuildID,
 		discordgo.PermissionOverwriteTypeRole,
-		0,
 		discordgo.PermissionVoiceConnect | discordgo.PermissionReadMessageHistory | discordgo.PermissionSendMessages,
+		0,
 	)
 	if err != nil {
 		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to lock the voice channel.",
+				Content: "Failed to unlock the voice channel.",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
@@ -65,17 +64,17 @@ func LockVC(i *discordgo.InteractionCreate) {
 	}
 
 	err = bot.Session.ChannelPermissionSet(
-		customVc.ID,
+		customVC.ID,
 		config.GlobalConfig.FinestRoleId,
 		discordgo.PermissionOverwriteTypeRole,
-		0,
 		discordgo.PermissionVoiceConnect | discordgo.PermissionReadMessageHistory | discordgo.PermissionSendMessages,
+		0,
 	)
 	if err != nil {
 		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to lock the voice channel.",
+				Content: "Failed to unlock the voice channel.",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
@@ -86,16 +85,16 @@ func LockVC(i *discordgo.InteractionCreate) {
 	}
 
 	editedChannel, err := bot.Session.ChannelEdit(
-		customVc.ID,
+		customVC.ID,
 		&discordgo.ChannelEdit{
-			Name: fmt.Sprintf("🔒 | %s's VC", i.Member.User.Username),
+			Name: fmt.Sprintf("%s's VC", i.Member.User.Username),
 		},
 	)
 	if err != nil || editedChannel == nil {
 		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to rename the voice channel due to hitting Discord API's rate limit, but the channel is successfully locked\nIf you want to rename the voice channel via interface, please do so again in 15 minutes or just manually rename the channel yourself.",
+				Content: "Failed to rename the voice channel due to hitting Discord API's rate limit, but the channel is successfully unlocked\nIf you want to rename the voice channel via interface, please do so again in 15 minutes or just manually rename the channel yourself.",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
@@ -107,7 +106,7 @@ func LockVC(i *discordgo.InteractionCreate) {
 	err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Voice channel locked successfully.",
+			Content: "Voice channel unlocked successfully.",
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
