@@ -1,4 +1,4 @@
-package bot
+package deploy
 
 import (
 	"fmt"

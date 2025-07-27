@@ -3,12 +3,11 @@ package button
 import (
 	"fmt"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
 
-func RenameVC(i *discordgo.InteractionCreate) {
+func RenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member == nil || i.GuildID == "" { return }
 
 	modal := &discordgo.InteractionResponse{
@@ -34,9 +33,9 @@ func RenameVC(i *discordgo.InteractionCreate) {
 		},
 	}
 
-	err := bot.Session.InteractionRespond(i.Interaction, modal)
+	err := s.InteractionRespond(i.Interaction, modal)
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to open rename VC modal.",
@@ -50,12 +49,12 @@ func RenameVC(i *discordgo.InteractionCreate) {
 	}
 }
 
-func HandleRenameVC(i *discordgo.InteractionCreate) {
+func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "You do not own a custom voice channel.",
@@ -68,9 +67,9 @@ func HandleRenameVC(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	customVc, err := bot.Session.Channel(res.ChannelID)
+	customVc, err := s.Channel(res.ChannelID)
 	if err != nil || customVc == nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve custom VC channel.",
@@ -93,7 +92,7 @@ func HandleRenameVC(i *discordgo.InteractionCreate) {
 		}
 	}
 	if newName == "" {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "New name cannot be empty.",
@@ -106,7 +105,7 @@ func HandleRenameVC(i *discordgo.InteractionCreate) {
 		return
 	}
 	if newName == customVc.Name {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "The new name is the same as the current name.",
@@ -119,11 +118,11 @@ func HandleRenameVC(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	_, err = bot.Session.ChannelEdit(customVc.ID, &discordgo.ChannelEdit{
+	_, err = s.ChannelEdit(customVc.ID, &discordgo.ChannelEdit{
 		Name: newName,
 	})
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to rename the voice channel.",
@@ -136,7 +135,7 @@ func HandleRenameVC(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: "Voice channel renamed successfully.",

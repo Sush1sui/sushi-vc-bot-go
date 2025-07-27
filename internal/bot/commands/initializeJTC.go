@@ -5,6 +5,7 @@ import (
 
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/common"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/config"
+	"github.com/Sush1sui/sushi-vc-bot-go/internal/handler"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
@@ -112,7 +113,7 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	// setup handlers
-
+	s.AddHandler(handler.InteractionHandler)
 
 	res, err := repository.CategoryJTCService.CreateCategoryJTC(interfaceChannel.ID, interfaceMessage.ID, jtcChannel.ID, category.ID)
 	if err != nil || res == nil {

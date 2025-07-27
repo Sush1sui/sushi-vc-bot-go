@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
 
-func LimitVC(i *discordgo.InteractionCreate) {
+func LimitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member == nil || i.GuildID == "" { return }
 
 	modal := &discordgo.InteractionResponse{
@@ -33,9 +32,9 @@ func LimitVC(i *discordgo.InteractionCreate) {
 		},
 	}
 
-	err := bot.Session.InteractionRespond(i.Interaction, modal)
+	err := s.InteractionRespond(i.Interaction, modal)
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to open limit VC modal.",
@@ -49,7 +48,7 @@ func LimitVC(i *discordgo.InteractionCreate) {
 	}	
 }
 
-func HandleLimitVC(i *discordgo.InteractionCreate) {
+func HandleLimitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
 	var limit int
@@ -58,7 +57,7 @@ func HandleLimitVC(i *discordgo.InteractionCreate) {
 			if input, ok := comp.(*discordgo.TextInput); ok && input.CustomID == "vc_limit" {
 				limit, e := strconv.Atoi(input.Value)
 				if e != nil || limit < 1 || limit > 99 {
-					err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: "Invalid limit. Please enter a number between 1 and 99.",
@@ -77,7 +76,7 @@ func HandleLimitVC(i *discordgo.InteractionCreate) {
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "You do not own a custom voice channel.",
@@ -90,9 +89,9 @@ func HandleLimitVC(i *discordgo.InteractionCreate) {
 		return
 	}
 	
-	customVC, err := bot.Session.Channel(res.ChannelID)
+	customVC, err := s.Channel(res.ChannelID)
 	if err != nil || customVC == nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve custom VC channel.",
@@ -105,14 +104,14 @@ func HandleLimitVC(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	_, err = bot.Session.ChannelEdit(
+	_, err = s.ChannelEdit(
 		res.ChannelID,
 		&discordgo.ChannelEdit{
 			UserLimit: limit,
 		},
 	)
 	if err != nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to update voice channel limit.",

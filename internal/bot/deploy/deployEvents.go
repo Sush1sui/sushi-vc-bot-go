@@ -1,12 +1,18 @@
-package bot
+package deploy
 
 import (
 	"log"
 
+	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot/events"
 	"github.com/bwmarrin/discordgo"
 )
 
-var EventHandlers = []any{}
+var EventHandlers = []any{
+	events.OnBlacklistEvent,
+	events.OnInviteVCEvent,
+	events.OnJoinVCEvent,
+	events.OnLeaveVCEvent,
+}
 
 func DeployEvents(s *discordgo.Session) {
 	for _, handler := range EventHandlers {

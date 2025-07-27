@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot/deploy"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/config"
+	"github.com/Sush1sui/sushi-vc-bot-go/internal/handler"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -39,8 +41,9 @@ func StartBot() {
 	}
 	defer s.Close()
 
-	DeployCommands(s)
-	DeployEvents(s)
+	deploy.DeployCommands(s)
+	deploy.DeployEvents(s)
+	s.AddHandler(handler.InteractionHandler)
 
 	fmt.Println("Bot is now running")
 

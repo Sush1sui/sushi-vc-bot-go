@@ -3,17 +3,16 @@ package button
 import (
 	"fmt"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
 
-func TransferOwnership(i *discordgo.InteractionCreate) {
+func TransferOwnership(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member == nil || i.GuildID == "" { return }
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "You do not own any voice channel.",
@@ -37,7 +36,7 @@ func TransferOwnership(i *discordgo.InteractionCreate) {
 
 	row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{selectMenu}}
 
-	err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
 			Title:    "Transfer Ownership",
@@ -45,7 +44,7 @@ func TransferOwnership(i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to create transfer ownership menu.",
@@ -59,12 +58,12 @@ func TransferOwnership(i *discordgo.InteractionCreate) {
 	}
 }
 
-func HandleTransferOwnership(i *discordgo.InteractionCreate) {
+func HandleTransferOwnership(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "You do not own a custom voice channel.",
@@ -77,9 +76,9 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	customVc, err := bot.Session.Channel(res.ChannelID)
+	customVc, err := s.Channel(res.ChannelID)
 	if err != nil || customVc == nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve custom VC channel.",
@@ -92,7 +91,7 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 		return
 	}
 	if customVc.OwnerID != i.Member.User.ID {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "You do not own this voice channel.",
@@ -107,7 +106,7 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 
 	selectedUserId := i.MessageComponentData().Values[0]
 	if selectedUserId == "" || len(i.MessageComponentData().Values) == 0 {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "No user selected.",
@@ -121,7 +120,7 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 	}
 	
 	// Set the new owner
-	err = bot.Session.ChannelPermissionSet(
+	err = s.ChannelPermissionSet(
 		customVc.ID,
 		selectedUserId,
 		discordgo.PermissionOverwriteTypeMember,
@@ -129,7 +128,7 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 		0,
 	)
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: fmt.Sprintf("Failed to set permissions for <@%s> in the custom VC.", selectedUserId),
@@ -143,7 +142,7 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 	}
 
 	// Remove permissions for the old owner
-	err = bot.Session.ChannelPermissionSet(
+	err = s.ChannelPermissionSet(
 		customVc.ID,
 		i.Member.User.ID,
 		discordgo.PermissionOverwriteTypeMember,
@@ -151,7 +150,7 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 		discordgo.PermissionManageChannels | discordgo.PermissionVoiceMoveMembers | discordgo.PermissionAddReactions | discordgo.PermissionAttachFiles,
 	)
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to remove permissions for the old owner in the custom VC.",
@@ -167,7 +166,7 @@ func HandleTransferOwnership(i *discordgo.InteractionCreate) {
 	// Change the owner in the database
 	count, err := repository.CustomVcService.ChangeOwnerByChannelId(res.ChannelID, selectedUserId)
 	if err != nil || count == 0 {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to transfer ownership of the custom VC in the database, contact your developer.",

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/common"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/config"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
@@ -47,6 +48,8 @@ func main() {
 			fmt.Printf("Error starting server: %v\n", err)
 		}
 	}()
+
+	go bot.StartBot()
 
 	go func() {
 		common.PingServerLoop(config.GlobalConfig.ServerUrl)

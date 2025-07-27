@@ -8,5 +8,4 @@ type CategoryJTCModel struct {
 	JTCChannelID    string        `bson:"jtc_channel_id"`
 	InterfaceID      string        `bson:"interface_id"`
 	InterfaceMessageID string    `bson:"interface_message_id"`
-	CustomVCsID       []string    `bson:"custom_vcs_id"`
 }

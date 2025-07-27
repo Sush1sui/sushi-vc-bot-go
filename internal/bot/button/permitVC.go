@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
 
-func PermitVC(i *discordgo.InteractionCreate) {
+func PermitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
 	minValue := 1
@@ -23,7 +22,7 @@ func PermitVC(i *discordgo.InteractionCreate) {
 
 	row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{selectMenu}}
 
-	err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
 			Title:    "Permit Users",
@@ -31,7 +30,7 @@ func PermitVC(i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to create permit menu.",
@@ -45,12 +44,12 @@ func PermitVC(i *discordgo.InteractionCreate) {
 	}
 }
 
-func HandleSelectedPermittedUsers(i *discordgo.InteractionCreate) {
+func HandleSelectedPermittedUsers(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
 	selectedUserIds := i.MessageComponentData().Values
 	if len(selectedUserIds) == 0 {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "No users selected.",
@@ -65,7 +64,7 @@ func HandleSelectedPermittedUsers(i *discordgo.InteractionCreate) {
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve VC data.",
@@ -78,9 +77,9 @@ func HandleSelectedPermittedUsers(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	customVc, err := bot.Session.Channel(res.ChannelID)
+	customVc, err := s.Channel(res.ChannelID)
 	if err != nil || customVc == nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve custom VC channel.",
@@ -94,7 +93,7 @@ func HandleSelectedPermittedUsers(i *discordgo.InteractionCreate) {
 	}
 
 	for _, userId := range selectedUserIds {
-		err := bot.Session.ChannelPermissionSet(
+		err := s.ChannelPermissionSet(
 			customVc.ID,
 			userId,
 			discordgo.PermissionOverwriteTypeMember,
@@ -102,7 +101,7 @@ func HandleSelectedPermittedUsers(i *discordgo.InteractionCreate) {
 			0,
 		)
 		if err != nil {
-			err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: fmt.Sprintf("Failed to permit user <@%s> to the voice channel.", userId),
@@ -116,7 +115,7 @@ func HandleSelectedPermittedUsers(i *discordgo.InteractionCreate) {
 		}
 	}
 
-	err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: fmt.Sprintf("Successfully permitted users: %s to the voice channel %s.",

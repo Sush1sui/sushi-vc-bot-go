@@ -5,11 +5,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/bwmarrin/discordgo"
 )
 
-func InviteUserMenu(i *discordgo.InteractionCreate) {
+func InviteUserMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
 	minValue := 1
@@ -23,7 +22,7 @@ func InviteUserMenu(i *discordgo.InteractionCreate) {
 
 	row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{selectMenu}}
 
-	err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content:    "Please select users to invite:",
@@ -32,7 +31,7 @@ func InviteUserMenu(i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to create invite menu.",
@@ -46,13 +45,13 @@ func InviteUserMenu(i *discordgo.InteractionCreate) {
 	}
 }
 
-func HandleInviteMenu(i *discordgo.InteractionCreate) {
+func HandleInviteMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 	if i.MessageComponentData().CustomID != "vc_invite_menu" { return }
 
 	selectedUserIds := i.MessageComponentData().Values
 	if len(selectedUserIds) == 0 {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "No users selected.",
@@ -66,9 +65,9 @@ func HandleInviteMenu(i *discordgo.InteractionCreate) {
 	}
 
 	messageURL := fmt.Sprintf("https://discord.com/channels/%s/%s", i.GuildID, i.ChannelID)
-	guild, err := bot.Session.Guild(i.GuildID)
+	guild, err := s.Guild(i.GuildID)
 	if err != nil || guild == nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve guild information.",
@@ -92,7 +91,7 @@ func HandleInviteMenu(i *discordgo.InteractionCreate) {
 		wg.Add(1)
 		go func(userId string) {
 			defer wg.Done()
-			dmChannel, err := bot.Session.UserChannelCreate(userId)
+			dmChannel, err := s.UserChannelCreate(userId)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -100,7 +99,7 @@ func HandleInviteMenu(i *discordgo.InteractionCreate) {
 				return
 			}
 
-			msg, err := bot.Session.ChannelMessageSendEmbed(dmChannel.ID, embed)
+			msg, err := s.ChannelMessageSendEmbed(dmChannel.ID, embed)
 			if err != nil || msg == nil {
 				usersFailedToInvite = append(usersFailedToInvite, "<@"+userId+">")
 				return
@@ -112,7 +111,7 @@ func HandleInviteMenu(i *discordgo.InteractionCreate) {
 
 	wg.Wait()
 
-	err = bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: fmt.Sprintf("Invited: %s\nFailed to invite: %s",

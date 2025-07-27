@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/bot"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
 
-func BlacklistMenu(i *discordgo.InteractionCreate) {
+func BlacklistMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil {
 		return
 	}
@@ -25,7 +24,7 @@ func BlacklistMenu(i *discordgo.InteractionCreate) {
 
 	row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{selectMenu}}
 
-	err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: "**Select members to blacklist from this channel**",
@@ -34,7 +33,7 @@ func BlacklistMenu(i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to create blacklist menu.",
@@ -48,7 +47,7 @@ func BlacklistMenu(i *discordgo.InteractionCreate) {
 	}
 }
 
-func HandleBlacklistSelection(i *discordgo.InteractionCreate) {
+func HandleBlacklistSelection(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil {
 		return
 	}
@@ -58,7 +57,7 @@ func HandleBlacklistSelection(i *discordgo.InteractionCreate) {
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "No custom VC found that you own.",
@@ -71,9 +70,9 @@ func HandleBlacklistSelection(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	customVc, err := bot.Session.Channel(res.ChannelID)
+	customVc, err := s.Channel(res.ChannelID)
 	if err != nil {
-		e := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve custom VC channel.",
@@ -88,7 +87,7 @@ func HandleBlacklistSelection(i *discordgo.InteractionCreate) {
 
 	selectedUserIds := i.MessageComponentData().Values
 	if len(selectedUserIds) == 0 {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "No users selected for blacklisting.",
@@ -104,7 +103,7 @@ func HandleBlacklistSelection(i *discordgo.InteractionCreate) {
 	var failedBlacklistUserIds []string
 	for _, userId := range selectedUserIds {
 		go func(userId string) {
-			err := bot.Session.ChannelPermissionSet(
+			err := s.ChannelPermissionSet(
 				customVc.ID,
 				userId,
 				discordgo.PermissionOverwriteTypeMember,
@@ -117,7 +116,7 @@ func HandleBlacklistSelection(i *discordgo.InteractionCreate) {
 	}
 
 	if len(failedBlacklistUserIds) > 0 {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: fmt.Sprintf("Failed to blacklist the following users: %s", strings.Join(failedBlacklistUserIds, ", ")),
@@ -129,7 +128,7 @@ func HandleBlacklistSelection(i *discordgo.InteractionCreate) {
 		}
 		return
 	} else {
-		err := bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Users successfully blacklisted from the channel.",
