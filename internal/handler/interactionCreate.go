@@ -29,17 +29,12 @@ func LoadInterfaceData() error {
 }
 
 func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Type != discordgo.InteractionMessageComponent { return }
-
-	// Only handle if this is an interface message
-	interfaceDataLock.RLock()
-	_, ok := interfaceData[i.Message.ID]
-	interfaceDataLock.RUnlock()
-	if !ok { return }
+	fmt.Println("Interaction received:", i.Type)
 
 	member := i.Member
 	if member == nil || i.GuildID == "" { return }
 
+	fmt.Println("Member ID:", member.User.ID, "Guild ID:", i.GuildID)
 	// Example: Check if user is in a voice channel
 	voiceChannelID := ""
 	guild, _ := s.State.Guild(i.GuildID)
@@ -62,41 +57,51 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	// TODO: Optionally check parent category here if needed
-
-	switch i.MessageComponentData().CustomID {
-	case "lock_vc":
-		button.LockVC(s, i)
-	case "unlock_vc":
-		button.UnlockVC(s, i)
-	case "hide":
-		button.HideUnhideVC(s, i, "hide")
-	case "unhide":
-		button.HideUnhideVC(s, i, "unhide")
-	case "limit":
-		button.LimitVC(s, i)
-	case "invite":
-		button.InviteUserMenu(s, i)
-	case "blacklist":
-		button.BlacklistMenu(s, i)
-	case "permit":
-		button.PermitVC(s, i)
-	case "rename":
-		button.RenameVC(s, i)
-	case "claim_vc":
-		button.ClaimVC(s, i)
-	case "transfer_owner":
-		button.TransferOwnership(s, i)
-	default:
-		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "**Unknown button interaction.**",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if e != nil {
-			fmt.Println("Failed to respond to interaction:", e)
+	fmt.Println("Voice Channel ID:", voiceChannelID)
+	switch i.Type {
+	case discordgo.InteractionMessageComponent:
+		customID := i.MessageComponentData().CustomID
+		fmt.Println("CustomID:", customID)
+		switch customID {
+			case "lock_vc":
+				button.LockVC(s, i)
+			case "unlock_vc":
+				button.UnlockVC(s, i)
+			case "hide":
+				button.HideUnhideVC(s, i, "hide")
+			case "unhide":
+				button.HideUnhideVC(s, i, "unhide")
+			case "limit":
+				button.LimitVC(s, i)
+			case "invite":
+				button.InviteUserMenu(s, i)
+			case "vc_invite_menu":
+				button.HandleInviteMenu(s, i)
+			case "blacklist":
+				button.BlacklistMenu(s, i)
+			case "blacklist_menu":
+				button.HandleBlacklistSelection(s, i)
+			case "permit":
+				button.PermitVC(s, i)
+			case "permit_menu":
+				button.HandleSelectedPermittedUsers(s, i)
+			case "rename":
+				button.RenameVC(s, i)
+			case "claim_vc":
+				button.ClaimVC(s, i)
+			case "transfer_owner":
+				button.TransferOwnership(s, i)
+			default:
+				e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "**Unknown button interaction.**",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if e != nil {
+					fmt.Println("Failed to respond to interaction:", e)
+				}
 		}
 	}
 }

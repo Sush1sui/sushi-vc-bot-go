@@ -52,11 +52,12 @@ func HandleLimitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
 	var limit int
+	found := false
 	for _, row := range i.ModalSubmitData().Components {
 		for _, comp := range row.(*discordgo.ActionsRow).Components {
 			if input, ok := comp.(*discordgo.TextInput); ok && input.CustomID == "vc_limit" {
-				limit, e := strconv.Atoi(input.Value)
-				if e != nil || limit < 1 || limit > 99 {
+				val, e := strconv.Atoi(input.Value)
+				if e != nil || val < 1 || val > 99 {
 					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
@@ -69,9 +70,24 @@ func HandleLimitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 					}
 					return
 				}
+				limit = val
+				found = true
 				break
 			}
 		}
+	}
+	if !found {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "No limit input found.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			fmt.Println("Error responding to interaction:", err)
+		}
+		return
 	}
 
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
@@ -104,6 +120,7 @@ func HandleLimitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	fmt.Println("Setting voice channel limit to:", limit)
 	_, err = s.ChannelEdit(
 		res.ChannelID,
 		&discordgo.ChannelEdit{
@@ -121,5 +138,16 @@ func HandleLimitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if err != nil {
 			fmt.Println("Error responding to interaction:", err)
 		}
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Voice channel user limit set to %d.", limit),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+	if err != nil {
+		fmt.Println("Error responding to interaction:", err)
 	}
 }

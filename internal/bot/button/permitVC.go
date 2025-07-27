@@ -23,10 +23,11 @@ func PermitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{selectMenu}}
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseModal,
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Title:    "Permit Users",
+			Title:    "**Permit Users**",
 			Components: []discordgo.MessageComponent{row},
+			Flags: discordgo.MessageFlagsEphemeral,
 		},
 	})
 	if err != nil {
@@ -46,6 +47,7 @@ func PermitVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func HandleSelectedPermittedUsers(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
+	if i.MessageComponentData().CustomID != "permit_menu" { return }
 
 	selectedUserIds := i.MessageComponentData().Values
 	if len(selectedUserIds) == 0 {

@@ -2,6 +2,7 @@ package button
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
@@ -118,6 +119,20 @@ func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	// Cooldown check
+	RenameCooldownMu.Lock()
+	lastRename, exists := RenameCooldown[customVc.ID]
+	now := time.Now()
+	if exists && now.Sub(lastRename) < RenameCooldownDuration {
+			remaining := RenameCooldownDuration - now.Sub(lastRename)
+			RenameCooldownMu.Unlock()
+			respond(s, i, fmt.Sprintf("Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", remaining.Truncate(time.Second)))
+			return
+	}
+	// Update cooldown after successful rename
+	RenameCooldown[customVc.ID] = now
+	RenameCooldownMu.Unlock()
+
 	_, err = s.ChannelEdit(customVc.ID, &discordgo.ChannelEdit{
 		Name: newName,
 	})
@@ -139,6 +154,7 @@ func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: "Voice channel renamed successfully.",
+			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
 	if err != nil {

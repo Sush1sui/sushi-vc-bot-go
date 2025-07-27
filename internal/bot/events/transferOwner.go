@@ -6,19 +6,10 @@ import (
 )
 
 func OnTransferOwner(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Member == nil || i.GuildID == "" {
-		return
-	}
-	if i.Type != discordgo.InteractionType(discordgo.UserSelectMenu) {
-		return
-	}
-	data := i.MessageComponentData()
-	if data.ComponentType != discordgo.UserSelectMenuComponent {
-		return
-	}
-	if data.CustomID != "transfer_owner_menu" {
-		return
-	}
-
-	button.HandleTransferOwnership(s, i)
+  if i.Member == nil || i.GuildID == "" { return }
+  if i.Type != discordgo.InteractionMessageComponent { return }
+  data := i.MessageComponentData()
+  if data.ComponentType != discordgo.UserSelectMenuComponent { return }
+  if data.CustomID != "transfer_owner_menu" { return }
+  button.HandleTransferOwnership(s, i)
 }

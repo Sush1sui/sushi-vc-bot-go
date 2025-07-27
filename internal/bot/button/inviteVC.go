@@ -111,6 +111,9 @@ func HandleInviteMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	wg.Wait()
 
+	if len(usersFailedToInvite) == 0 {
+		usersFailedToInvite = append(usersFailedToInvite, "None")
+	}
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -118,6 +121,7 @@ func HandleInviteMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				strings.Join(usersInvited, ", "),
 				strings.Join(usersFailedToInvite, ", "),
 			),
+			Flags: discordgo.MessageFlagsEphemeral,
 		},
 	})
 	if err != nil {

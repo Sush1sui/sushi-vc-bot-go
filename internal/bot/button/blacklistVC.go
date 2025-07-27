@@ -9,9 +9,7 @@ import (
 )
 
 func BlacklistMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.GuildID == "" || i.Member == nil {
-		return
-	}
+	if i.GuildID == "" || i.Member == nil { return }
 
 	minValue := 1
 	selectMenu := discordgo.SelectMenu{

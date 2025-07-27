@@ -8,10 +8,11 @@ import (
 )
 
 var EventHandlers = []any{
-	events.OnBlacklistEvent,
-	events.OnInviteVCEvent,
 	events.OnJoinVCEvent,
 	events.OnLeaveVCEvent,
+	events.OnLimitVC,
+	events.OnRenameVC,
+	events.OnTransferOwner,
 }
 
 func DeployEvents(s *discordgo.Session) {

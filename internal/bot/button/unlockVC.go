@@ -2,6 +2,7 @@ package button
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/config"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
@@ -9,107 +10,59 @@ import (
 )
 
 func UnlockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Member == nil || i.GuildID == "" { return }
+    if i.Member == nil || i.GuildID == "" {
+        return
+    }
 
-	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
-	if err != nil || res == nil {
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "You are not the owner of a custom voice channel.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
-		return
-	}
+    res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
+    if err != nil || res == nil {
+        respond(s, i, "You are not the owner of a custom voice channel.")
+        return
+    }
 
-	customVC, err := s.Channel(res.ChannelID)
-	if err != nil || customVC == nil {
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Custom VC not found.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
-		return
-	}
+    customVC, err := s.Channel(res.ChannelID)
+    if err != nil || customVC == nil {
+        respond(s, i, "Custom VC not found.")
+        return
+    }
 
-	err = s.ChannelPermissionSet(
-		customVC.ID,
-		i.GuildID,
-		discordgo.PermissionOverwriteTypeRole,
-		discordgo.PermissionVoiceConnect | discordgo.PermissionReadMessageHistory | discordgo.PermissionSendMessages,
-		0,
-	)
-	if err != nil {
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to unlock the voice channel.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
-		return
-	}
+    // Unlock permissions
+    if err := setUnlockPerms(s, customVC.ID, i.GuildID, config.GlobalConfig.FinestRoleId); err != nil {
+        respond(s, i, "Failed to unlock the voice channel.")
+        return
+    }
 
-	err = s.ChannelPermissionSet(
-		customVC.ID,
-		config.GlobalConfig.FinestRoleId,
-		discordgo.PermissionOverwriteTypeRole,
-		discordgo.PermissionVoiceConnect | discordgo.PermissionReadMessageHistory | discordgo.PermissionSendMessages,
-		0,
-	)
-	if err != nil {
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to unlock the voice channel.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
-		return
-	}
+    // Cooldown check
+    RenameCooldownMu.Lock()
+    lastRename, exists := RenameCooldown[customVC.ID]
+    now := time.Now()
+    if exists && now.Sub(lastRename) < RenameCooldownDuration {
+        remaining := RenameCooldownDuration - now.Sub(lastRename)
+        RenameCooldownMu.Unlock()
+        respond(s, i, fmt.Sprintf("Successfully unlocked VC! Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", remaining.Truncate(time.Second)))
+        return
+    }
+    RenameCooldown[customVC.ID] = now
+    RenameCooldownMu.Unlock()
 
-	editedChannel, err := s.ChannelEdit(
-		customVC.ID,
-		&discordgo.ChannelEdit{
-			Name: fmt.Sprintf("%s's VC", i.Member.User.Username),
-		},
-	)
-	if err != nil || editedChannel == nil {
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to rename the voice channel due to hitting Discord API's rate limit, but the channel is successfully unlocked\nIf you want to rename the voice channel via interface, please do so again in 15 minutes or just manually rename the channel yourself.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
-	}
+    // Rename channel
+    _, err = s.ChannelEdit(customVC.ID, &discordgo.ChannelEdit{
+        Name: fmt.Sprintf("%s's VC", i.Member.User.Username),
+    })
+    if err != nil {
+        respond(s, i, "Failed to rename the voice channel due to hitting Discord API's rate limit.")
+        return
+    }
 
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Voice channel unlocked successfully.",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
-	if err != nil {
-		fmt.Println("Error responding to interaction:", err)
-	}
+    respond(s, i, "Successfully unlocked VC!")
+}
+
+func setUnlockPerms(s *discordgo.Session, channelID, guildID, roleID string) error {
+    if err := s.ChannelPermissionSet(channelID, guildID, discordgo.PermissionOverwriteTypeRole, discordgo.PermissionVoiceConnect|discordgo.PermissionReadMessageHistory|discordgo.PermissionSendMessages, 0); err != nil {
+        return err
+    }
+    if err := s.ChannelPermissionSet(channelID, roleID, discordgo.PermissionOverwriteTypeRole, discordgo.PermissionVoiceConnect|discordgo.PermissionReadMessageHistory|discordgo.PermissionSendMessages, 0); err != nil {
+        return err
+    }
+    return nil
 }

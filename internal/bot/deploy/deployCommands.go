@@ -50,6 +50,9 @@ func DeployCommands(s *discordgo.Session) {
 	}
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if i.Type != discordgo.InteractionApplicationCommand {
+        return // Only handle slash commands here!
+    }
 		if handler, ok := CommandHandlers[i.ApplicationCommandData().Name]; ok {
 			handler(s, i)
 		} else {

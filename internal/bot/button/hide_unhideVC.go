@@ -105,8 +105,8 @@ func HideUnhideVC(s *discordgo.Session, i *discordgo.InteractionCreate, action s
 				customVC.ID,
 				config.GlobalConfig.FinestRoleId,
 				discordgo.PermissionOverwriteTypeRole,
-				0,
 				discordgo.PermissionViewChannel,
+				0,
 			)
 			if e != nil {
 				e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -126,8 +126,8 @@ func HideUnhideVC(s *discordgo.Session, i *discordgo.InteractionCreate, action s
 				customVC.ID,
 				i.GuildID,
 				discordgo.PermissionOverwriteTypeRole,
-				0,
 				discordgo.PermissionViewChannel,
+				0,
 			)
 			if e != nil {
 				e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

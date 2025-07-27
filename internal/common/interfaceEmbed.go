@@ -27,13 +27,13 @@ func InterfaceButtonsRow1() []discordgo.MessageComponent {
 			Components: []discordgo.MessageComponent{
 				&discordgo.Button{
 					CustomID: "lock_vc",
-					Label:    "Lock",
+					Label:    "Lock VC",
 					Style:    discordgo.DangerButton,
 					Emoji:    &discordgo.ComponentEmoji{ID: "1293802497735135243", Name: "lock_vc"},
 				},
 				&discordgo.Button{
 					CustomID: "unlock_vc",
-					Label:    "Unlock",
+					Label:    "Unlock VC",
 					Style:    discordgo.SuccessButton,
 					Emoji:    &discordgo.ComponentEmoji{ID: "1293802495407030272", Name: "unlock_vc"},
 				},

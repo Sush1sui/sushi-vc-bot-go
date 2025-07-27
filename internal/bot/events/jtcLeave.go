@@ -19,7 +19,7 @@ func OnLeaveVCEvent(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 
 	// Check if the user left a JTC voice channel
 	customVCs, err := repository.CustomVcService.GetAllVcs()
-	if err != nil || len(customVCs) == 0 {
+	if err != nil {
 		fmt.Println("No custom VCs found or error retrieving them:", err)
 		return
 	}
