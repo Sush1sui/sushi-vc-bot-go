@@ -1,4 +1,4 @@
-## Work in progress, maybe i finish tomorrow?
+## This is fast and super efficient in CPU and Memory
 
 ```bash
 Migrating my sushi vc bot to Golang
