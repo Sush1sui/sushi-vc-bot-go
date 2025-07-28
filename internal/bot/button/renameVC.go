@@ -121,17 +121,22 @@ func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	// Cooldown check
 	RenameCooldownMu.Lock()
-	lastRename, exists := RenameCooldown[customVc.ID]
 	now := time.Now()
-	if exists && now.Sub(lastRename) < RenameCooldownDuration {
-			remaining := RenameCooldownDuration - now.Sub(lastRename)
-			RenameCooldownMu.Unlock()
-			respond(s, i, fmt.Sprintf("Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", remaining.Truncate(time.Second)))
-			return
+	timestamps := RenameCooldown[customVc.ID]
+	var recent []time.Time
+	for _, t := range timestamps {
+		if now.Sub(t) < RenameCooldownDuration { recent = append(recent, t) }
 	}
-	// Update cooldown after successful rename
-	RenameCooldown[customVc.ID] = now
+	if len(recent) >= 2 {
+		nextAvailable := RenameCooldownDuration - now.Sub(recent[0])
+		RenameCooldownMu.Unlock()
+		respond(s, i, fmt.Sprintf("Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second)))
+		return
+	}
+	recent = append(recent, now)
+	RenameCooldown[customVc.ID] = recent
 	RenameCooldownMu.Unlock()
+
 
 	_, err = s.ChannelEdit(customVc.ID, &discordgo.ChannelEdit{
 		Name: newName,

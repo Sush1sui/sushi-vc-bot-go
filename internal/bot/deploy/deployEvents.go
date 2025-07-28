@@ -12,7 +12,6 @@ var EventHandlers = []any{
 	events.OnLeaveVCEvent,
 	events.OnLimitVC,
 	events.OnRenameVC,
-	events.OnTransferOwner,
 }
 
 func DeployEvents(s *discordgo.Session) {

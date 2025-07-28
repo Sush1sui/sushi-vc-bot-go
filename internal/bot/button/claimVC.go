@@ -72,6 +72,20 @@ func ClaimVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	if res.OwnerID == i.Member.User.ID {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "You already own this VC.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			fmt.Println("Failed to respond to interaction:", err)
+		}
+		return
+	}
+
 	customVc, err := s.Channel(res.ChannelID)
 	if err != nil || customVc == nil {
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -113,6 +127,7 @@ func ClaimVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		0,
 	)
 	if err != nil {
+		fmt.Println("Failed to set permissions for the custom VC:", err)
 		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -129,12 +144,13 @@ func ClaimVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Set permissions for the old owner of the custom VC
 	err = s.ChannelPermissionSet(
 		customVc.ID,
-		customVc.OwnerID,
+		res.OwnerID,
 		discordgo.PermissionOverwriteTypeMember,
 		discordgo.PermissionViewChannel | discordgo.PermissionSendMessages | discordgo.PermissionReadMessageHistory | discordgo.PermissionVoiceConnect,
 		discordgo.PermissionManageChannels | discordgo.PermissionVoiceMoveMembers | discordgo.PermissionAddReactions | discordgo.PermissionAttachFiles,
 	)
 	if err != nil {
+		fmt.Println("Failed to set permissions for the old owner of the custom VC:", err)
 		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -148,8 +164,9 @@ func ClaimVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	count, err := repository.CustomVcService.ChangeOwnerByChannelId(voiceChannelID, i.Member.User.ID)
+	count, err := repository.CustomVcService.ChangeOwnerByChannelId(customVc.ID, i.Member.User.ID)
 	if err != nil || count == 0 {
+		fmt.Println("Failed to change owner of the custom VC:", err)
 		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{

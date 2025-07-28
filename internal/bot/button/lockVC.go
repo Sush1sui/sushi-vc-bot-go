@@ -11,7 +11,7 @@ import (
 )
 
 var (
-    RenameCooldown   = make(map[string]time.Time)
+    RenameCooldown   = make(map[string][]time.Time)
     RenameCooldownMu sync.Mutex
 )
 const RenameCooldownDuration = 10 * time.Minute
@@ -41,16 +41,20 @@ func LockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
     // Cooldown check
     RenameCooldownMu.Lock()
-    lastRename, exists := RenameCooldown[customVc.ID]
     now := time.Now()
-    if exists && now.Sub(lastRename) < RenameCooldownDuration {
-        remaining := RenameCooldownDuration - now.Sub(lastRename)
+    timestamps := RenameCooldown[customVc.ID]
+    var recent []time.Time
+    for _, t := range timestamps {
+        if now.Sub(t) < RenameCooldownDuration { recent = append(recent, t) }
+    }
+    if len(recent) >= 2 {
+        nextAvailable := RenameCooldownDuration - now.Sub(recent[0])
         RenameCooldownMu.Unlock()
-        respond(s, i, fmt.Sprintf("Successfully locked VC! Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", remaining.Truncate(time.Second)))
+        respond(s, i, fmt.Sprintf("Successfully locked VC! Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second)))
         return
     }
-    // Update cooldown after successful rename
-    RenameCooldown[customVc.ID] = now
+    recent = append(recent, now)
+    RenameCooldown[customVc.ID] = recent
     RenameCooldownMu.Unlock()
 
     // Rename channel

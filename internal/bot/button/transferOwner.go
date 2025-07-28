@@ -37,10 +37,11 @@ func TransferOwnership(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{selectMenu}}
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseModal,
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Title:    "Transfer Ownership",
 			Components: []discordgo.MessageComponent{row},
+			Flags:  discordgo.MessageFlagsEphemeral,
 		},
 	})
 	if err != nil {
@@ -90,7 +91,8 @@ func HandleTransferOwnership(s *discordgo.Session, i *discordgo.InteractionCreat
 		}
 		return
 	}
-	if customVc.OwnerID != i.Member.User.ID {
+
+	if res.OwnerID != i.Member.User.ID {
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -176,6 +178,18 @@ func HandleTransferOwnership(s *discordgo.Session, i *discordgo.InteractionCreat
 		if e != nil {
 			fmt.Println("Error responding to interaction:", e)
 		}
+		return
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Ownership transferred successfully to <@%s>!", selectedUserId),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+	if err != nil {
+		fmt.Println("Error responding to interaction:", err)
 		return
 	}
 }

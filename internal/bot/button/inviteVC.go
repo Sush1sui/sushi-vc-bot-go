@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -64,7 +65,22 @@ func HandleInviteMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	messageURL := fmt.Sprintf("https://discord.com/channels/%s/%s", i.GuildID, i.ChannelID)
+	customVC, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
+	if err != nil || customVC == nil {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "You do not own any voice channel.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			fmt.Println("Error responding to interaction:", err)
+		}
+		return
+	}
+
+	messageURL := fmt.Sprintf("https://discord.com/channels/%s/%s", i.GuildID, customVC.ChannelID)
 	guild, err := s.Guild(i.GuildID)
 	if err != nil || guild == nil {
 		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
