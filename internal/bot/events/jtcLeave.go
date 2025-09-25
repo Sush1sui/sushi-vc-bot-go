@@ -28,7 +28,6 @@ func OnLeaveVCEvent(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 		if customVC.ChannelID == vs.BeforeUpdate.ChannelID {
 			channel, err := s.State.Channel(vs.BeforeUpdate.ChannelID)
 			if err != nil || channel == nil {
-				channel, err = s.Channel(vs.BeforeUpdate.ChannelID)
 				fmt.Println("Error retrieving channel:", err)
 				return
 			}

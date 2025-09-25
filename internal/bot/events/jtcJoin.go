@@ -3,7 +3,6 @@ package events
 import (
 	"fmt"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/config"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
@@ -35,31 +34,24 @@ func OnJoinVCEvent(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 				Name: 	 vcName,
 				Type: discordgo.ChannelTypeGuildVoice,
 				ParentID: category.CategoryID,
-				PermissionOverwrites: []*discordgo.PermissionOverwrite{
-					{
-						ID:    vs.GuildID, // @everyone
-						Type:  discordgo.PermissionOverwriteTypeRole,
-						Deny:  discordgo.PermissionVoiceConnect | discordgo.PermissionViewChannel | discordgo.PermissionSendMessages,
-						Allow: 0,
-					},
-					{
-						ID:    vs.UserID, // The user
-						Type:  discordgo.PermissionOverwriteTypeMember,
-						Allow: discordgo.PermissionVoiceConnect | discordgo.PermissionVoiceSpeak | discordgo.PermissionManageChannels | discordgo.PermissionReadMessageHistory | discordgo.PermissionVoiceMoveMembers,
-						Deny:  0,
-					},
-					{
-						ID:    config.GlobalConfig.FinestRoleId, // Finest Role
-						Type:  discordgo.PermissionOverwriteTypeRole,
-						Allow: discordgo.PermissionVoiceConnect | discordgo.PermissionVoiceSpeak | discordgo.PermissionViewChannel | discordgo.PermissionSendMessages | discordgo.PermissionReadMessageHistory,
-						Deny:  0,
-					},
-				},
+				// PermissionOverwrites omitted -> inherits category overwrites
 			})
 			if err != nil {
 				fmt.Println("Error creating voice channel:", err)
 				return
 			}
+
+			// Optionally give the owner a member-specific overwrite (this does not affect other role overwrites)
+             _ = s.ChannelPermissionSet(
+				newChannel.ID, 
+				vs.UserID, 
+				discordgo.PermissionOverwriteTypeMember,
+                discordgo.PermissionVoiceConnect|
+				discordgo.PermissionManageChannels|
+				discordgo.PermissionVoiceMoveMembers|
+				discordgo.PermissionVoiceSpeak|
+				discordgo.PermissionReadMessageHistory, 0,
+			)
 
 			// move the user to the new channel
 			err = s.GuildMemberMove(vs.GuildID, vs.UserID, &newChannel.ID)
