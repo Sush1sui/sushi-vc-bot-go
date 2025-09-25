@@ -3,7 +3,6 @@ package events
 import (
 	"fmt"
 
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/config"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
@@ -52,15 +51,6 @@ func OnJoinVCEvent(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 				discordgo.PermissionVoiceMoveMembers|
 				discordgo.PermissionVoiceSpeak|
 				discordgo.PermissionReadMessageHistory, 0,
-			)
-
-			_ = s.ChannelPermissionSet(
-				newChannel.ID,
-				config.GlobalConfig.FinestRoleId,
-				discordgo.PermissionOverwriteTypeRole,
-				discordgo.PermissionVoiceConnect|
-				discordgo.PermissionReadMessageHistory|
-				discordgo.PermissionSendMessages, 0,
 			)
 
 			// move the user to the new channel
