@@ -157,8 +157,9 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("JTC initialized successfully in **%s** category.", category.Name),
-	}})
+			Content: fmt.Sprintf("JTC initialized successfully in **%s** category, interface: **%s**.", category.Name, interfaceChannel.Mention()),
+		},
+	})
 	if err != nil {
 		fmt.Println("Error responding to interaction:", err)
 		return
