@@ -15,6 +15,30 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	// check if there is an existing category
+	existingCategory, err := repository.CategoryJTCService.GetAllJTCs()
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to create category.",
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
+		fmt.Println("Error fetching existing JTC categories:", err)
+		return
+	}
+	if len(existingCategory) > 0 {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "JTC is already initialized.",
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
 	category, err := s.GuildChannelCreateComplex(i.GuildID, discordgo.GuildChannelCreateData{
 		Name: "VC",
 		Type: discordgo.ChannelTypeGuildCategory,
