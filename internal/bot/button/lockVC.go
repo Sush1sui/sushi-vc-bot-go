@@ -70,7 +70,7 @@ func LockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func setLockPerms(s *discordgo.Session, channelID, guildID, roleID string) error {
-    if err := s.ChannelPermissionSet(channelID, guildID, discordgo.PermissionOverwriteTypeRole, 0, discordgo.PermissionVoiceConnect|discordgo.PermissionReadMessageHistory|discordgo.PermissionSendMessages); err != nil {
+    if err := s.ChannelPermissionSet(channelID, guildID, discordgo.PermissionOverwriteTypeRole, 0, discordgo.PermissionVoiceConnect); err != nil {
         return err
     }
     if err := s.ChannelPermissionSet(channelID, roleID, discordgo.PermissionOverwriteTypeRole, 0, discordgo.PermissionVoiceConnect); err != nil {
