@@ -21,22 +21,59 @@ func LockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
         return
     }
 
+    s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+        Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+        Data: &discordgo.InteractionResponseData{
+            Flags: discordgo.MessageFlagsEphemeral,
+        },
+    })
+
     res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
     if err != nil || res == nil {
-        respond(s, i, "You are not an owner of a custom vc channel.")
+        msg := "You don't own a custom voice channel."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
 
     customVc, err := s.Channel(res.ChannelID)
     if err != nil || customVc == nil {
-        respond(s, i, "Custom VC not found.")
+        msg := "VC not found."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
 
     // Lock permissions
     if err := setLockPerms(s, customVc.ID, i.GuildID, config.GlobalConfig.FinestRoleId); err != nil {
-        respond(s, i, "Failed to lock the voice channel.")
+        msg := "Failed to set lock permissions."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
+        fmt.Println("Error setting lock permissions:", err)
         return
+    }
+
+    // add permission to the users in the vc after locking
+    usersInVC := make(map[string]struct{})
+    guild, err := s.State.Guild(i.GuildID)
+    if err == nil && guild != nil {
+        for _, vs := range guild.VoiceStates {
+            if vs.ChannelID == customVc.ID {
+                usersInVC[vs.UserID] = struct{}{}
+            }
+        }
+    }
+    for userID := range usersInVC {
+        s.ChannelPermissionSet(
+            customVc.ID,
+            userID,
+            discordgo.PermissionOverwriteTypeMember,
+            discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect,
+            0,
+        )
     }
 
     // Cooldown check
@@ -50,7 +87,10 @@ func LockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
     if len(recent) >= 2 {
         nextAvailable := RenameCooldownDuration - now.Sub(recent[0])
         RenameCooldownMu.Unlock()
-        respond(s, i, fmt.Sprintf("Successfully locked VC! Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second)))
+        msg := fmt.Sprintf("Successfully locked VC! Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second))
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
     recent = append(recent, now)
@@ -62,29 +102,40 @@ func LockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
         Name: fmt.Sprintf("🔒 | %s's VC", i.Member.User.Username),
     })
     if err != nil {
-        respond(s, i, "Failed to rename the voice channel due to hitting Discord API's rate limit.")
+        msg := "Failed to rename the voice channel due to hitting Discord API's rate limit."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
 
-    respond(s, i, "Voice channel locked successfully.")
+    msg := "Successfully locked and renamed VC!"
+    s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+        Content: &msg,
+    })
 }
 
 func setLockPerms(s *discordgo.Session, channelID, guildID, roleID string) error {
     if err := s.ChannelPermissionSet(channelID, guildID, discordgo.PermissionOverwriteTypeRole, 0, discordgo.PermissionVoiceConnect); err != nil {
         return err
     }
-    if err := s.ChannelPermissionSet(channelID, roleID, discordgo.PermissionOverwriteTypeRole, discordgo.PermissionReadMessageHistory, discordgo.PermissionVoiceConnect); err != nil {
+    if err := s.ChannelPermissionSet(
+        channelID, 
+        roleID, 
+        discordgo.PermissionOverwriteTypeRole, 
+        discordgo.PermissionViewChannel | 
+        discordgo.PermissionCreateInstantInvite | 
+        discordgo.PermissionVoiceSpeak | 
+        discordgo.PermissionVoiceStreamVideo |
+        discordgo.PermissionSendMessages | 
+        discordgo.PermissionAddReactions | 
+        discordgo.PermissionReadMessageHistory | 
+        discordgo.PermissionUseApplicationCommands, 
+        discordgo.PermissionManageEvents | 
+        discordgo.PermissionCreateEvents | 
+        discordgo.PermissionSendVoiceMessages,
+    ); err != nil {
         return err
     }
     return nil
-}
-
-func respond(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) {
-    _ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-        Type: discordgo.InteractionResponseChannelMessageWithSource,
-        Data: &discordgo.InteractionResponseData{
-            Content: msg,
-            Flags:   discordgo.MessageFlagsEphemeral,
-        },
-    })
 }

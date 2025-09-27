@@ -28,21 +28,16 @@ func OnJoinVCEvent(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 				return
 			}
 
-			userVC, err := repository.CustomVcService.GetByOwnerOrChannelId("", vs.UserID)
-			if err != nil {
-				fmt.Println("Error checking existing custom VC:", err)
-				return
-			}
-			if userVC != nil {
-				// user already has a custom VC, do not create another
-				// move them to their existing VC
+            // Check if the user already owns a custom VC (search by owner)
+            userVC, _ := repository.CustomVcService.GetByOwnerOrChannelId(vs.UserID, "")
+            if userVC != nil {
+                // move the user to their existing VC
 				err = s.GuildMemberMove(vs.GuildID, vs.UserID, &userVC.ChannelID)
 				if err != nil {
 					fmt.Println("Error moving member to existing custom VC:", err)
-					return
 				}
-				return
-			}
+                continue
+            }
 
 			// create the voice channel for the user
 			vcName := fmt.Sprintf("%s's VC", member.User.Username)

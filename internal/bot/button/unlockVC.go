@@ -14,21 +14,37 @@ func UnlockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
         return
     }
 
+    s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+        Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+        Data: &discordgo.InteractionResponseData{
+            Flags: discordgo.MessageFlagsEphemeral,
+        },
+    })
+
     res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
     if err != nil || res == nil {
-        respond(s, i, "You are not the owner of a custom voice channel.")
+        msg := "You don't own a custom voice channel."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
 
     customVC, err := s.Channel(res.ChannelID)
     if err != nil || customVC == nil {
-        respond(s, i, "Custom VC not found.")
+        msg := "Custom VC not found."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
 
     // Unlock permissions
     if err := setUnlockPerms(s, customVC.ID, i.GuildID, config.GlobalConfig.FinestRoleId); err != nil {
-        respond(s, i, "Failed to unlock the voice channel.")
+        msg := "Failed to unlock the voice channel."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
 
@@ -43,7 +59,10 @@ func UnlockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
     if len(recent) >= 2 {
         nextAvailable := RenameCooldownDuration - now.Sub(recent[0])
         RenameCooldownMu.Unlock()
-        respond(s, i, fmt.Sprintf("Successfully unlocked VC! Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second)))
+        msg := fmt.Sprintf("Successfully unlocked VC! Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second))
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
     recent = append(recent, now)
@@ -55,11 +74,17 @@ func UnlockVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
         Name: fmt.Sprintf("%s's VC", i.Member.User.Username),
     })
     if err != nil {
-        respond(s, i, "Failed to rename the voice channel due to hitting Discord API's rate limit.")
+        msg := "Failed to rename the voice channel due to hitting Discord API's rate limit."
+        s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+            Content: &msg,
+        })
         return
     }
 
-    respond(s, i, "Successfully unlocked VC!")
+    msg := "Successfully unlocked VC!"
+    s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+        Content: &msg,
+    })
 }
 
 func setUnlockPerms(s *discordgo.Session, channelID, guildID, roleID string) error {

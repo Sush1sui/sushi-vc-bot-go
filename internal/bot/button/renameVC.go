@@ -53,33 +53,29 @@ func RenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.GuildID == "" || i.Member == nil { return }
 
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+	
+
 	res, err := repository.CustomVcService.GetByOwnerOrChannelId(i.Member.User.ID, "")
 	if err != nil || res == nil {
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "You do not own a custom voice channel.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		msg := "You don't own a custom voice channel."
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
 		return
 	}
 
 	customVc, err := s.Channel(res.ChannelID)
 	if err != nil || customVc == nil {
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to retrieve custom VC channel.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		msg := "VC not found."
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
 		return
 	}
 
@@ -93,29 +89,17 @@ func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 	}
 	if newName == "" {
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "New name cannot be empty.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		msg := "Invalid channel name."
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
 		return
 	}
 	if newName == customVc.Name {
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "The new name is the same as the current name.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		msg := "The new name is the same as the current name."
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
-		if err != nil {
-			fmt.Println("Error responding to interaction:", err)
-		}
 		return
 	}
 
@@ -130,7 +114,10 @@ func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if len(recent) >= 2 {
 		nextAvailable := RenameCooldownDuration - now.Sub(recent[0])
 		RenameCooldownMu.Unlock()
-		respond(s, i, fmt.Sprintf("Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second)))
+		msg := fmt.Sprintf("Please wait %s before renaming the voice channel again. This is due to Discord API's rate limit. You can rename the channel manually if needed.", nextAvailable.Truncate(time.Second))
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
+		})
 		return
 	}
 	recent = append(recent, now)
@@ -142,27 +129,15 @@ func HandleRenameVC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Name: newName,
 	})
 	if err != nil {
-		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to rename the voice channel.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		msg := "Failed to rename the voice channel due to hitting Discord API's rate limit."
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
-		if e != nil {
-			fmt.Println("Error responding to interaction:", e)
-		}
 		return
 	}
 
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Voice channel renamed successfully.",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
+	msg := fmt.Sprintf("Successfully renamed VC to: %s", newName)
+	s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &msg,
 	})
-	if err != nil {
-		fmt.Println("Error responding to interaction:", err)
-	}
 }

@@ -99,7 +99,15 @@ func HandleSelectedPermittedUsers(s *discordgo.Session, i *discordgo.Interaction
 			customVc.ID,
 			userId,
 			discordgo.PermissionOverwriteTypeMember,
-			discordgo.PermissionViewChannel|discordgo.PermissionVoiceConnect|discordgo.PermissionReadMessageHistory,
+			discordgo.PermissionViewChannel|
+			discordgo.PermissionVoiceConnect|
+			discordgo.PermissionReadMessageHistory|
+			discordgo.PermissionSendMessages|
+			discordgo.PermissionAddReactions|
+			discordgo.PermissionUseApplicationCommands|
+			discordgo.PermissionVoiceSpeak|
+			discordgo.PermissionVoiceStreamVideo|
+			discordgo.PermissionSendVoiceMessages,
 			0,
 		)
 		if err != nil {

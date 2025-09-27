@@ -15,26 +15,25 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	// acknowledge immediately so we have time to do work
+    _ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+        Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+        Data: &discordgo.InteractionResponseData{
+            Flags: discordgo.MessageFlagsEphemeral,
+        },
+    })
+
 	// check if there is an existing category
 	existingCategory, err := repository.CategoryJTCService.GetAllJTCs()
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to create category.",
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: func(s string) *string { return &s }("Failed to check existing JTC categories."),
 		})
-		fmt.Println("Error fetching existing JTC categories:", err)
 		return
 	}
 	if len(existingCategory) > 0 {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "JTC is already initialized.",
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: func(s string) *string { return &s }("A JTC category already exists. Please delete the existing one before creating a new one."),
 		})
 		return
 	}
@@ -43,84 +42,77 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Name: "VC",
 		Type: discordgo.ChannelTypeGuildCategory,
 		PermissionOverwrites: []*discordgo.PermissionOverwrite{
-			{ // everyone role
-				ID: i.GuildID,
+			{
+				ID:   i.GuildID, // @everyone
 				Type: discordgo.PermissionOverwriteTypeRole,
-				Deny: discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect | discordgo.PermissionSendMessages,
+				Deny: discordgo.PermissionSendMessages,
 			},
 			{
-				ID: "1299577480868528330", // music bots
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1299577480868528330", // music bots
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect | discordgo.PermissionVoiceSpeak,
 			},
 			{
-				ID: config.GlobalConfig.FinestRoleId,
-				Type: discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionCreatePublicThreads | discordgo.PermissionSendMessages | discordgo.PermissionCreatePrivateThreads | discordgo.PermissionSendMessagesInThreads | discordgo.PermissionAddReactions | discordgo.PermissionManageThreads | discordgo.PermissionReadMessageHistory | discordgo.PermissionVoiceSpeak | discordgo.PermissionVoiceStreamVideo | discordgo.PermissionUseEmbeddedActivities, 
+				ID:    "1292473360114122784", // finest role
+				Type:  discordgo.PermissionOverwriteTypeRole,
+				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionCreatePublicThreads | discordgo.PermissionSendMessages | discordgo.PermissionCreatePrivateThreads | discordgo.PermissionSendMessagesInThreads | discordgo.PermissionAddReactions | discordgo.PermissionManageThreads | discordgo.PermissionReadMessageHistory | discordgo.PermissionVoiceSpeak | discordgo.PermissionVoiceStreamVideo | discordgo.PermissionUseEmbeddedActivities | discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect,
 			},
 			{
-				ID: "1303998295911436309", // lvl50
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303998295911436309", // lvl50
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1303998297538560060", // lvl60
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303998297538560060", // lvl60
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1303998299031736393", // lvl70
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303998299031736393", // lvl70
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1303998300671709186", // lvl80
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303998300671709186", // lvl80
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1303998302785900544", // lvl90
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303998302785900544", // lvl90
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1303998304710819940", // lvl100
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303998304710819940", // lvl100
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1303916681692839956", // pioneers
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303916681692839956", // pioneers
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1303924607555997776", // supporter
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1303924607555997776", // supporter
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
 			},
 			{
-				ID: "1292420325002448930", // booster
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1292420325002448930", // booster
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles | discordgo.PermissionUseExternalEmojis | discordgo.PermissionUseExternalStickers,
 			},
 			{
-				ID: "1310186525606154340", // staff
-				Type: discordgo.PermissionOverwriteTypeRole,
+				ID:    "1310186525606154340", // staff
+				Type:  discordgo.PermissionOverwriteTypeRole,
 				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles | discordgo.PermissionUseExternalEmojis | discordgo.PermissionUseExternalStickers,
 			},
 		},
 	})
 	if err != nil {
-		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to create category.",
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: func(s string) *string { return &s }("Failed to create category channel."),
 		})
-		if e != nil {
-			fmt.Println("Error responding to interaction:", e)
-		}
 		return
 	}
 
@@ -143,16 +135,9 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to create JTC channel.",
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: func(s string) *string { return &s }("Failed to create JTC voice channel."),
 		})
-		if e != nil {
-			fmt.Println("Error responding to interaction:", e)
-		}
 		return
 	}
 
@@ -175,16 +160,9 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to create interface channel.",
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: func(s string) *string { return &s }("Failed to create interface text channel."),
 		})
-		if e != nil {
-			fmt.Println("Error responding to interaction:", e)
-		}
 		return
 	}
 
@@ -208,27 +186,13 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	res, err := repository.CategoryJTCService.CreateCategoryJTC(interfaceChannel.ID, interfaceMessage.ID, jtcChannel.ID, category.ID)
 	if err != nil || res == nil {
-		e := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Failed to initialize JTC.",
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
+		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: func(s string) *string { return &s }("Failed to save JTC configuration to the database."),
 		})
-		if e != nil {
-			fmt.Println("Error responding to interaction:", e)
-		}
 		return
 	}
 
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("JTC initialized successfully in **%s** category, interface: **%s**.", category.Name, interfaceChannel.Mention()),
-		},
+	s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: func(s string) *string { return &s }("JTC has been successfully initialized!"),
 	})
-	if err != nil {
-		fmt.Println("Error responding to interaction:", err)
-		return
-	}
 }
