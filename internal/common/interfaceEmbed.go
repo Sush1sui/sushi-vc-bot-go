@@ -6,11 +6,11 @@ func InterfaceEmbed() *discordgo.MessageEmbed {
 	return &discordgo.MessageEmbed{
 		Color: 0xFFFFFF,
 		Author: &discordgo.MessageEmbedAuthor{
-			Name:    "Finesse VC Interface",
+			Name:    "8-Bot VC Interface",
 			IconURL: "https://images-ext-1.discordapp.net/external/3QmLnkyUjiyS6EAm51WT-Yyqe7bcDoF9QRTpsfECbII/https/media.tenor.com/ZjZcvkBzoNMAAAAi/pepe-scucha.gif",
 		},
 		Title:       "ENJOY UNLIMITED VC INTERFACE ACCESS!",
-		Description: "Hey, Thank you for supporting our server! Here at Finesse we make sure that our members make the most of it when they're on a VC with friends! With having the freedom to do what you please with your own voice channel!",
+		Description: "Hey, Thank you for supporting our server! Here at 8-Bot we make sure that our members make the most of it when they're on a VC with friends! With having the freedom to do what you please with your own voice channel!",
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    "Use the buttons below to manage your voice channel",
 			IconURL: "https://images-ext-1.discordapp.net/external/w1oTKGUTTcVtkkPbAEF-0CkhMwuugjhfnzKoX5UCVBE/%3Fsize%3D96%26quality%3Dlossless/https/cdn.discordapp.com/emojis/1293411594621157458.gif",

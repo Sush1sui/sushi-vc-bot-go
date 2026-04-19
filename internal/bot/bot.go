@@ -16,7 +16,7 @@ import (
 var Session *discordgo.Session
 
 func StartBot() {
-	s, e := discordgo.New("Bot "+config.GlobalConfig.BotToken)
+	s, e := discordgo.New("Bot " + config.GlobalConfig.BotToken)
 	if e != nil {
 		log.Fatal("error creating Discord session, " + e.Error())
 	}
@@ -24,15 +24,15 @@ func StartBot() {
 	s.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentsGuildPresences | discordgo.IntentsGuildMembers | discordgo.IntentsGuildMessages
 
 	s.AddHandler(func(sess *discordgo.Session, r *discordgo.Ready) {
-    sess.UpdateStatusComplex(discordgo.UpdateStatusData{
-        Status: "idle",
-        Activities: []*discordgo.Activity{
-            {
-                Name: "with Finesse!",
-                Type: discordgo.ActivityTypeListening,
-            },
-        },
-    })
+		sess.UpdateStatusComplex(discordgo.UpdateStatusData{
+			Status: "idle",
+			Activities: []*discordgo.Activity{
+				{
+					Name: "8-BOT VC",
+					Type: discordgo.ActivityTypeListening,
+				},
+			},
+		})
 	})
 
 	e = s.Open()

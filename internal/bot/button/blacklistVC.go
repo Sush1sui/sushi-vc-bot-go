@@ -4,17 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Sush1sui/sushi-vc-bot-go/internal/common"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
 
 func BlacklistMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.GuildID == "" || i.Member == nil { return }
+	if i.GuildID == "" || i.Member == nil {
+		return
+	}
 
 	minValue := 1
 	selectMenu := discordgo.SelectMenu{
 		MenuType:    discordgo.UserSelectMenu,
-		CustomID:   "blacklist_menu",
+		CustomID:    "blacklist_menu",
 		Placeholder: "Select users to blacklist",
 		MinValues:   &minValue, // wtf discordgo why is this a pointer?
 		MaxValues:   5,
@@ -25,9 +28,9 @@ func BlacklistMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "**Select members to blacklist from this channel**",
+			Content:    "**Select members to blacklist from this channel**",
 			Components: []discordgo.MessageComponent{row},
-			Flags: discordgo.MessageFlagsEphemeral,
+			Flags:      discordgo.MessageFlagsEphemeral,
 		},
 	})
 	if err != nil {
@@ -35,7 +38,7 @@ func BlacklistMenu(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to create blacklist menu.",
-				Flags: discordgo.MessageFlagsEphemeral,
+				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 		if e != nil {
@@ -59,7 +62,7 @@ func HandleBlacklistSelection(s *discordgo.Session, i *discordgo.InteractionCrea
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "No custom VC found that you own.",
-				Flags: discordgo.MessageFlagsEphemeral,
+				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 		if e != nil {
@@ -74,11 +77,27 @@ func HandleBlacklistSelection(s *discordgo.Session, i *discordgo.InteractionCrea
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "Failed to retrieve custom VC channel.",
-				Flags: discordgo.MessageFlagsEphemeral,
+				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 		if e != nil {
 			fmt.Println("Error responding to interaction:", e)
+		}
+		return
+	}
+
+	settings := common.GetEffectiveGuildSettings(i.GuildID)
+
+	if common.ContainsString(settings.IgnoredChannelIDs, customVc.ID) {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "This channel is configured as ignored and cannot be modified.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			fmt.Println("Error responding to interaction:", err)
 		}
 		return
 	}
@@ -89,7 +108,7 @@ func HandleBlacklistSelection(s *discordgo.Session, i *discordgo.InteractionCrea
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "No users selected for blacklisting.",
-				Flags: discordgo.MessageFlagsEphemeral,
+				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 		if err != nil {
@@ -99,18 +118,24 @@ func HandleBlacklistSelection(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	var failedBlacklistUserIds []string
+	var skippedProtectedUsers []string
 	for _, userId := range selectedUserIds {
-		go func(userId string) {
-			err := s.ChannelPermissionSet(
-				customVc.ID,
-				userId,
-				discordgo.PermissionOverwriteTypeMember,
-				0,
-				discordgo.PermissionViewChannel | discordgo.PermissionSendMessages | discordgo.PermissionReadMessageHistory | discordgo.PermissionVoiceConnect)
-			if err != nil {
-				failedBlacklistUserIds = append(failedBlacklistUserIds, fmt.Sprintf("<@%s>", userId))
-			}
-		}(userId)
+		member, memberErr := s.GuildMember(i.GuildID, userId)
+		if memberErr == nil && memberHasProtectedRole(member, settings.ProtectedRoleIDs) {
+			skippedProtectedUsers = append(skippedProtectedUsers, fmt.Sprintf("<@%s>", userId))
+			continue
+		}
+
+		err := s.ChannelPermissionSet(
+			customVc.ID,
+			userId,
+			discordgo.PermissionOverwriteTypeMember,
+			0,
+			discordgo.PermissionViewChannel|discordgo.PermissionSendMessages|discordgo.PermissionReadMessageHistory|discordgo.PermissionVoiceConnect,
+		)
+		if err != nil {
+			failedBlacklistUserIds = append(failedBlacklistUserIds, fmt.Sprintf("<@%s>", userId))
+		}
 	}
 
 	if len(failedBlacklistUserIds) > 0 {
@@ -125,7 +150,23 @@ func HandleBlacklistSelection(s *discordgo.Session, i *discordgo.InteractionCrea
 			fmt.Println("Error responding to interaction:", err)
 		}
 		return
-	} else {
+	}
+
+	if len(skippedProtectedUsers) > 0 {
+		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("Skipped protected users: %s", strings.Join(skippedProtectedUsers, ", ")),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			fmt.Println("Error responding to interaction:", err)
+		}
+		return
+	}
+
+	{
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{

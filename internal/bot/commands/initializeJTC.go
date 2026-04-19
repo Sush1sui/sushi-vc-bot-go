@@ -4,11 +4,88 @@ import (
 	"fmt"
 
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/common"
-	"github.com/Sush1sui/sushi-vc-bot-go/internal/config"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/handler"
 	"github.com/Sush1sui/sushi-vc-bot-go/internal/repository"
 	"github.com/bwmarrin/discordgo"
 )
+
+func buildCategoryOverwrites(guildID string, voiceExceptionRoleIDs []string) []*discordgo.PermissionOverwrite {
+	overwrites := []*discordgo.PermissionOverwrite{
+		{
+			ID:   guildID, // @everyone
+			Type: discordgo.PermissionOverwriteTypeRole,
+			Deny: discordgo.PermissionSendMessages,
+		},
+	}
+
+	for _, roleID := range voiceExceptionRoleIDs {
+		overwrites = append(overwrites, &discordgo.PermissionOverwrite{
+			ID:   roleID,
+			Type: discordgo.PermissionOverwriteTypeRole,
+			Allow: discordgo.PermissionCreateInstantInvite |
+				discordgo.PermissionCreatePublicThreads |
+				discordgo.PermissionSendMessages |
+				discordgo.PermissionCreatePrivateThreads |
+				discordgo.PermissionSendMessagesInThreads |
+				discordgo.PermissionAddReactions |
+				discordgo.PermissionManageThreads |
+				discordgo.PermissionReadMessageHistory |
+				discordgo.PermissionVoiceSpeak |
+				discordgo.PermissionVoiceStreamVideo |
+				discordgo.PermissionUseEmbeddedActivities |
+				discordgo.PermissionViewChannel |
+				discordgo.PermissionVoiceConnect,
+		})
+	}
+
+	return overwrites
+}
+
+func buildJoinToCreateOverwrites(guildID string, voiceExceptionRoleIDs []string) []*discordgo.PermissionOverwrite {
+	overwrites := []*discordgo.PermissionOverwrite{
+		{
+			ID:   guildID,
+			Type: discordgo.PermissionOverwriteTypeRole,
+			Deny: discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect | discordgo.PermissionSendMessages,
+		},
+	}
+
+	for _, roleID := range voiceExceptionRoleIDs {
+		overwrites = append(overwrites, &discordgo.PermissionOverwrite{
+			ID:    roleID,
+			Type:  discordgo.PermissionOverwriteTypeRole,
+			Allow: discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect,
+			Deny:  discordgo.PermissionSendMessages,
+		})
+	}
+
+	return overwrites
+}
+
+func buildInterfaceOverwrites(guildID string, voiceExceptionRoleIDs []string) []*discordgo.PermissionOverwrite {
+	overwrites := []*discordgo.PermissionOverwrite{
+		{
+			ID:   guildID,
+			Type: discordgo.PermissionOverwriteTypeRole,
+			Deny: discordgo.PermissionViewChannel | discordgo.PermissionSendMessages,
+		},
+	}
+
+	for _, roleID := range voiceExceptionRoleIDs {
+		overwrites = append(overwrites, &discordgo.PermissionOverwrite{
+			ID:    roleID,
+			Type:  discordgo.PermissionOverwriteTypeRole,
+			Allow: discordgo.PermissionViewChannel,
+			Deny: discordgo.PermissionSendMessages |
+				discordgo.PermissionCreateEvents |
+				discordgo.PermissionCreatePublicThreads |
+				discordgo.PermissionCreatePrivateThreads |
+				discordgo.PermissionAddReactions,
+		})
+	}
+
+	return overwrites
+}
 
 func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member == nil || i.GuildID == "" {
@@ -16,12 +93,12 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	// acknowledge immediately so we have time to do work
-    _ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-        Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-        Data: &discordgo.InteractionResponseData{
-            Flags: discordgo.MessageFlagsEphemeral,
-        },
-    })
+	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
 
 	// check if there is an existing category
 	existingCategory, err := repository.CategoryJTCService.GetAllJTCs()
@@ -38,76 +115,12 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	settings := common.GetEffectiveGuildSettings(i.GuildID)
+
 	category, err := s.GuildChannelCreateComplex(i.GuildID, discordgo.GuildChannelCreateData{
-		Name: "VC",
-		Type: discordgo.ChannelTypeGuildCategory,
-		PermissionOverwrites: []*discordgo.PermissionOverwrite{
-			{
-				ID:   i.GuildID, // @everyone
-				Type: discordgo.PermissionOverwriteTypeRole,
-				Deny: discordgo.PermissionSendMessages,
-			},
-			{
-				ID:    "1299577480868528330", // music bots
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect | discordgo.PermissionVoiceSpeak,
-			},
-			{
-				ID:    "1292473360114122784", // finest role
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionCreatePublicThreads | discordgo.PermissionSendMessages | discordgo.PermissionCreatePrivateThreads | discordgo.PermissionSendMessagesInThreads | discordgo.PermissionAddReactions | discordgo.PermissionManageThreads | discordgo.PermissionReadMessageHistory | discordgo.PermissionVoiceSpeak | discordgo.PermissionVoiceStreamVideo | discordgo.PermissionUseEmbeddedActivities | discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect,
-			},
-			{
-				ID:    "1303998295911436309", // lvl50
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1303998297538560060", // lvl60
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1303998299031736393", // lvl70
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1303998300671709186", // lvl80
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1303998302785900544", // lvl90
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1303998304710819940", // lvl100
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1303916681692839956", // pioneers
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1303924607555997776", // supporter
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles,
-			},
-			{
-				ID:    "1292420325002448930", // booster
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles | discordgo.PermissionUseExternalEmojis | discordgo.PermissionUseExternalStickers,
-			},
-			{
-				ID:    "1310186525606154340", // staff
-				Type:  discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionCreateInstantInvite | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles | discordgo.PermissionUseExternalEmojis | discordgo.PermissionUseExternalStickers,
-			},
-		},
+		Name:                 "VC",
+		Type:                 discordgo.ChannelTypeGuildCategory,
+		PermissionOverwrites: buildCategoryOverwrites(i.GuildID, settings.VoiceExceptionRoleIDs),
 	})
 	if err != nil {
 		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
@@ -117,22 +130,10 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	jtcChannel, err := s.GuildChannelCreateComplex(i.GuildID, discordgo.GuildChannelCreateData{
-		Name: "Join to Create",
-		Type: discordgo.ChannelTypeGuildVoice,
-		ParentID: category.ID,
-		PermissionOverwrites: []*discordgo.PermissionOverwrite{
-			{ // everyone role
-				ID: i.GuildID,
-				Type: discordgo.PermissionOverwriteTypeRole,
-				Deny: discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect | discordgo.PermissionSendMessages,
-			},
-			{
-				ID: config.GlobalConfig.FinestRoleId,
-				Type: discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionViewChannel | discordgo.PermissionVoiceConnect,
-				Deny: discordgo.PermissionSendMessages,
-			},
-		},
+		Name:                 "Join to Create",
+		Type:                 discordgo.ChannelTypeGuildVoice,
+		ParentID:             category.ID,
+		PermissionOverwrites: buildJoinToCreateOverwrites(i.GuildID, settings.VoiceExceptionRoleIDs),
 	})
 	if err != nil {
 		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
@@ -142,22 +143,10 @@ func InitializeJTC(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	interfaceChannel, err := s.GuildChannelCreateComplex(i.GuildID, discordgo.GuildChannelCreateData{
-		Name: "vc-interface",
-		Type: discordgo.ChannelTypeGuildText,
-		ParentID: category.ID,
-		PermissionOverwrites: []*discordgo.PermissionOverwrite{
-			{
-				ID: i.GuildID,
-				Type: discordgo.PermissionOverwriteTypeRole,
-				Deny: discordgo.PermissionViewChannel | discordgo.PermissionSendMessages,
-			},
-			{
-				ID: config.GlobalConfig.FinestRoleId,
-				Type: discordgo.PermissionOverwriteTypeRole,
-				Allow: discordgo.PermissionViewChannel,
-				Deny: discordgo.PermissionSendMessages | discordgo.PermissionCreateEvents | discordgo.PermissionCreatePublicThreads | discordgo.PermissionCreatePrivateThreads | discordgo.PermissionAddReactions,
-			},
-		},
+		Name:                 "vc-interface",
+		Type:                 discordgo.ChannelTypeGuildText,
+		ParentID:             category.ID,
+		PermissionOverwrites: buildInterfaceOverwrites(i.GuildID, settings.VoiceExceptionRoleIDs),
 	})
 	if err != nil {
 		s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{

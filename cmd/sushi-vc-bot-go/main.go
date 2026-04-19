@@ -30,6 +30,7 @@ func main() {
 
 	categoryJTCCollection := mongoClient.Database(config.GlobalConfig.MongoDBName).Collection(config.GlobalConfig.CategoryJTCCollectionName)
 	customVcCollection := mongoClient.Database(config.GlobalConfig.MongoDBName).Collection(config.GlobalConfig.CustomVcCollectionName)
+	guildSettingsCollection := mongoClient.Database(config.GlobalConfig.MongoDBName).Collection(config.GlobalConfig.GuildSettingsCollectionName)
 
 	repository.CategoryJTCService = &mongodb.MongoClient{
 		Client: categoryJTCCollection,
@@ -37,7 +38,9 @@ func main() {
 	repository.CustomVcService = &mongodb.MongoClient{
 		Client: customVcCollection,
 	}
-
+	repository.GuildSettingsService = &mongodb.MongoClient{
+		Client: guildSettingsCollection,
+	}
 
 	addr := fmt.Sprintf(":%s", config.GlobalConfig.Port)
 	router := server.NewRouter()

@@ -12,19 +12,19 @@ import (
 )
 
 type Config struct {
-	Port string
-	BotToken string
-	AppID string
-	ServerUrl string
-	MongoDBName string
-	CategoryJTCCollectionName string
-	CustomVcCollectionName string
-	FinestRoleId string
+	Port                        string
+	BotToken                    string
+	AppID                       string
+	ServerUrl                   string
+	MongoDBName                 string
+	CategoryJTCCollectionName   string
+	CustomVcCollectionName      string
+	GuildSettingsCollectionName string
 }
 
 var GlobalConfig *Config
 
-func New() (error) {
+func New() error {
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("Error loading .env file")
 	}
@@ -59,20 +59,20 @@ func New() (error) {
 		return fmt.Errorf("CUSTOM_VC_COLLECTION_NAME is not set in the environment variables")
 	}
 
-	finestRoleId := os.Getenv("FINEST_ROLE_ID")
-	if finestRoleId == "" {
-		return fmt.Errorf("FINEST_ROLE_ID is not set in the environment variables")
+	guildSettingsCollectionName := os.Getenv("GUILD_SETTINGS_COLLECTION_NAME")
+	if guildSettingsCollectionName == "" {
+		guildSettingsCollectionName = "guild_settings"
 	}
 
 	GlobalConfig = &Config{
-		Port:     port,
-		BotToken: botToken,
-		AppID:   appID,
-		ServerUrl: os.Getenv("SERVER_URL"),
-		MongoDBName: mongoDBName,
-		CategoryJTCCollectionName: categoryJTCCollectionName,
-		CustomVcCollectionName: customVcCollectionName,
-		FinestRoleId: finestRoleId,
+		Port:                        port,
+		BotToken:                    botToken,
+		AppID:                       appID,
+		ServerUrl:                   os.Getenv("SERVER_URL"),
+		MongoDBName:                 mongoDBName,
+		CategoryJTCCollectionName:   categoryJTCCollectionName,
+		CustomVcCollectionName:      customVcCollectionName,
+		GuildSettingsCollectionName: guildSettingsCollectionName,
 	}
 	return nil
 }
@@ -83,16 +83,16 @@ func MongoConnection() *mongo.Client {
 	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI)
 
 	// Create a new client and connect to the server
-  client, err := mongo.Connect(opts)
-  if err != nil {
-    panic(err)
-  }
+	client, err := mongo.Connect(opts)
+	if err != nil {
+		panic(err)
+	}
 
-  // Send a ping to confirm a successful connection
-  if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-    panic(err)
-  }
-  fmt.Println("DB Connected!")
+	// Send a ping to confirm a successful connection
+	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
+		panic(err)
+	}
+	fmt.Println("DB Connected!")
 
 	return client
 }
